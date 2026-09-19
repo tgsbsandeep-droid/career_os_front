@@ -12,6 +12,14 @@ const supabase = createClient(
   },
 );
 
+const API_BASE = String(import.meta.env.VITE_API_URL ?? "").trim().replace(/\/$/, "");
+
+function resolveApiUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  return API_BASE ? `${API_BASE}${suffix}` : suffix;
+}
+
 export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   const { data } = await supabase.auth.getSession();
   const headers = new Headers(options.headers);
@@ -20,7 +28,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
 
   let response: Response;
   try {
-    response = await fetch(path, { ...options, headers });
+    response = await fetch(resolveApiUrl(path), { ...options, headers });
   } catch {
     throw new Error("Cannot reach the API server. Start it with npm run dev from the project root.");
   }
