@@ -30,7 +30,11 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   try {
     response = await fetch(resolveApiUrl(path), { ...options, headers });
   } catch {
-    throw new Error("Cannot reach the API server. Start it with npm run dev from the project root.");
+    throw new Error(
+      API_BASE
+        ? `Cannot reach the API at ${API_BASE}. Check VITE_API_URL and that the backend is running.`
+        : "Cannot reach the API server. Set VITE_API_URL (local: http://localhost:5000).",
+    );
   }
 
   const contentType = response.headers.get("content-type") ?? "";

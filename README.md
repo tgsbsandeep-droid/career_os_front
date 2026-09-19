@@ -41,12 +41,44 @@ App: `http://localhost:5173`
 
 Vite proxies `/api` to `VITE_API_URL` (default `http://localhost:5000`). Start the **backend repo** separately.
 
+## Deploy on Cloudflare Pages
+
+Connect the **frontend** GitHub repo. Settings:
+
+| Setting | Value |
+|---|---|
+| Framework preset | Vite |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Root directory | `/` (this repo is already the frontend) |
+| Node version | `20` or higher |
+
+Add these **build-time** environment variables in Pages → Settings → Environment variables. Vite bakes them into the JS bundle, so you must **rebuild** after changing them.
+
+| Key | Live value |
+|---|---|
+| `VITE_SUPABASE_URL` | same as backend `SUPABASE_URL` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | same as backend `SUPABASE_PUBLISHABLE_KEY` |
+| `VITE_API_URL` | public Render API URL, e.g. `https://career-os-back.onrender.com` (no trailing slash) |
+
+SPA routes (`/login`, `/candidate/dashboard`, …) need [`public/_redirects`](public/_redirects). Vite copies that file into `dist/` on build.
+
+Also set backend `FRONTEND_URL` (Render) to the Pages origin, e.g. `https://career-os-front.pages.dev`, or the site will hit CORS errors.
+
+In Supabase: Authentication → URL Configuration, add:
+
+```
+https://<your-pages-domain>/auth/callback
+https://<your-pages-domain>/auth/reset-password
+```
+
 ## Scripts
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Vite dev server |
-| `npm run build` | Typecheck + production build |
+| `npm run build` | Production Vite build |
+| `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
 | `npm run lint` | oxlint |
 | `npm run preview` | Preview the production build |
 
