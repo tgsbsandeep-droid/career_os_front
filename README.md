@@ -72,6 +72,16 @@ https://<your-pages-domain>/auth/callback
 https://<your-pages-domain>/auth/reset-password
 ```
 
+Google Cloud must also allow Supabase’s callback (not the Pages origin).
+`Error 400: redirect_uri_mismatch` is fixed on the OAuth **Web client** whose
+Client ID is in Supabase → Authentication → Providers → Google:
+
+```
+https://tudwilxhzsxtvufhvbch.supabase.co/auth/v1/callback
+```
+
+Current client: `347864484607-ss8opc02n0j6mvkdgofouk1k8lm6uv76.apps.googleusercontent.com`
+
 ## Scripts
 
 | Command | What it does |
