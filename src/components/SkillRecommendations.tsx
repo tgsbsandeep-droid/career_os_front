@@ -53,7 +53,9 @@ export default function SkillRecommendations() {
                   <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">{job.match_score}%</span>
                 )}
               </div>
-              <p className="mt-1 text-sm text-slate-500">{job.company_name} · {job.location}</p>
+              <p className="mt-1 text-sm text-slate-500">
+                {job.company_name ? `${job.company_name} · ` : ""}{job.location}
+              </p>
               <p className="mt-2 text-xs text-slate-600">{(job.strengths?.length ? job.strengths : job.skills)?.join(" · ") || "Open opportunity"}</p>
             </Link>
           )) : <p className="text-sm text-slate-500">No matching jobs yet. Add skills to your profile to improve recommendations.</p>}
