@@ -174,7 +174,9 @@ export default function Saved() {
                                 {job?.title ?? "Job"}
                               </Link>
                             </h2>
-                            <p className="text-[13px] text-[#5b6b64]">{job?.company_name ?? "Company"}</p>
+                            {job?.company_name && job.company_name !== "Company" && (
+                              <p className="text-[13px] text-[#5b6b64]">{job.company_name}</p>
+                            )}
                           </div>
                         </div>
                         <div className="mt-4 flex flex-wrap gap-3 text-[13px] text-[#5b6b64]">

@@ -114,7 +114,7 @@ function scoreJob(job: ApiJob, candidateSkills: string[]): ScoredJob {
     ...job,
     title: asText(job.title),
     skills,
-    company_name: asText(job.company_name) || "Company",
+    company_name: asText(job.company_name) === "Company" ? "" : asText(job.company_name),
     location: asText(job.location),
     employment_type: asText(job.employment_type) || "Full-time",
     salary_range: asText(job.salary_range),
@@ -462,7 +462,9 @@ export default function Jobs() {
                               {job.title}
                             </Link>
                           </h2>
-                          <p className="text-[13px] text-[#5b6b64]">{job.company_name}</p>
+                          {job.company_name && (
+                            <p className="text-[13px] text-[#5b6b64]">{job.company_name}</p>
+                          )}
                         </div>
                         <span className="ml-auto rounded-full bg-[#eaf6f0] px-2.5 py-1 text-[11px] font-bold text-[#146c45]">
                           {job.match_score}% match

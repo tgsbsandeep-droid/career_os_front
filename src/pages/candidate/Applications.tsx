@@ -145,7 +145,7 @@ export default function Applications() {
         setApplications(appRes.applications.map((r) => ({
           id: r.id,
           role: r.job?.title ?? "Job application",
-          company: r.job?.company_name ?? "Company",
+          company: (r.job?.company_name && r.job.company_name !== "Company") ? r.job.company_name : "",
           location: r.job?.location ?? "Not specified",
           status: r.status,
           updated: r.updated_at ?? r.created_at,
@@ -377,7 +377,9 @@ export default function Applications() {
                       {match}%
                     </span>
                   </div>
-                  <p className="mt-1.5 text-[12px] text-white/60">{job.company_name} · {job.location}</p>
+                  <p className="mt-1.5 text-[12px] text-white/60">
+                    {job.company_name && job.company_name !== "Company" ? `${job.company_name} · ` : ""}{job.location}
+                  </p>
                   <p className="mt-2 text-[12px] text-white/40">{job.skills?.slice(0, 3).join(" · ") || "Skills not listed"}</p>
                   <p className="mt-3 flex items-center gap-1 text-[12px] font-semibold text-[#2aa36a] group-hover:text-[#4dc98a]">
                     View role <ExternalLink size={12} />

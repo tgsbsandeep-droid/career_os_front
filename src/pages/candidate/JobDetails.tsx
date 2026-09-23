@@ -135,7 +135,7 @@ export default function JobDetails() {
         setJob({
           ...jobRow,
           title: asText(jobRow.title),
-          company_name: asText(jobRow.company_name) || "Company",
+          company_name: asText(jobRow.company_name) === "Company" ? "" : asText(jobRow.company_name),
           location: asText(jobRow.location),
           employment_type: asText(jobRow.employment_type) || "Full-time",
           experience_level: asText(jobRow.experience_level),
@@ -263,7 +263,9 @@ export default function JobDetails() {
                   <h1 className="font-[family-name:var(--font-display)] text-[28px] font-semibold leading-tight tracking-[-0.025em] text-[#12241c]">
                     {job.title}
                   </h1>
-                  <p className="mt-1 text-[15px] text-[#5b6b64]">{job.company_name || "Company"}</p>
+                  {job.company_name && (
+                    <p className="mt-1 text-[15px] text-[#5b6b64]">{job.company_name}</p>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
