@@ -14,10 +14,10 @@ const supabase = createClient(
 
 const LIVE_API_URL = "https://career-os-back.onrender.com";
 
-const API_BASE = String(
-  import.meta.env.VITE_API_URL
-  ?? (import.meta.env.PROD ? LIVE_API_URL : ""),
-).trim().replace(/\/$/, "");
+const API_BASE = (
+  String(import.meta.env.VITE_API_URL ?? "").trim().replace(/\/$/, "")
+  || (import.meta.env.PROD ? LIVE_API_URL : "")
+);
 
 function resolveApiUrl(path: string) {
   if (/^https?:\/\//i.test(path)) return path;
