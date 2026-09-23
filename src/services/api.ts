@@ -37,7 +37,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   } catch {
     throw new Error(
       API_BASE
-        ? `Cannot reach the API at ${API_BASE}. Check VITE_API_URL and that the backend is running.`
+        ? `Cannot reach the API at ${API_BASE}. The server may be waking up — please wait 30 seconds and try again.`
         : "Cannot reach the API server. Set VITE_API_URL (local: http://localhost:5000).",
     );
   }

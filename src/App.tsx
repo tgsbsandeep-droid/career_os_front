@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   BrowserRouter,
   Outlet,
@@ -45,7 +46,20 @@ function CandidateLayout() {
   );
 }
 
+// Fire-and-forget warm-up ping so Render free-tier wakes up before the user
+// needs the API. Errors are intentionally swallowed.
+const API_BASE = String(import.meta.env.VITE_API_URL ?? "").trim().replace(/\/$/, "")
+  || (import.meta.env.PROD ? "https://career-os-back.onrender.com" : "");
+
+function useWarmUpBackend() {
+  useEffect(() => {
+    if (!API_BASE) return;
+    fetch(`${API_BASE}/api/health`, { method: "GET" }).catch(() => {/* ignore */});
+  }, []);
+}
+
 export default function App() {
+  useWarmUpBackend();
   return (
     <BrowserRouter>
       <Routes>
