@@ -140,8 +140,7 @@ export default function Profile() {
     const hasSignal =
       profileHasSkillSignal({
         education: input.education,
-        educationField: input.educationField,
-        educationInstitution: input.educationInstitution,
+        education_field: input.educationField,
         experience: input.experience,
         certificates: input.certificates,
       }) || Boolean(input.resumeUrl);
