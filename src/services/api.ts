@@ -25,15 +25,36 @@ function resolveApiUrl(path: string) {
   return API_BASE ? `${API_BASE}${suffix}` : suffix;
 }
 
+// Retry a fetch once after a short delay when a network error occurs.
+// This handles Render free-tier cold-starts: the warm-up ping fires on app
+// mount but the backend may still be waking up when the first real API call
+// arrives. One automatic retry after 4 s covers the typical wake-up window.
+async function fetchWithRetry(url: string, init: RequestInit, retries = 1): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (err) {
+    if (retries <= 0) throw err;
+    await new Promise((resolve) => setTimeout(resolve, 4_000));
+    return fetchWithRetry(url, init, retries - 1);
+  }
+}
+
 export async function apiRequest<T>(path: string, options: RequestInit = {}) {
   const { data } = await supabase.auth.getSession();
   const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+  // Only set Content-Type on requests that carry a body. Setting it on GETs
+  // forces a CORS preflight OPTIONS round-trip on every call to the
+  // cross-origin Render backend, adding unnecessary latency.
+  if (options.body !== undefined && options.body !== null) {
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+  }
   if (data.session) headers.set("Authorization", `Bearer ${data.session.access_token}`);
 
   let response: Response;
   try {
-    response = await fetch(resolveApiUrl(path), { ...options, headers });
+    response = await fetchWithRetry(resolveApiUrl(path), { ...options, headers });
   } catch {
     throw new Error(
       API_BASE

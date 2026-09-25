@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import {
   BrowserRouter,
   Outlet,
@@ -7,35 +7,42 @@ import {
   Navigate,
 } from "react-router-dom";
 
-import LandingPage from "./pages/LandingPage";
-import Register from "./pages/auth/Register";
-import Login from "./pages/auth/Login";
-import AuthCallback from "./pages/auth/AuthCallback";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-import ResetPassword from "./pages/auth/ResetPassword";
-import SelectRole from "./pages/auth/SelectRole";
-import CandidateDashboard from "./pages/candidate/Dashboard";
-import CareerCoach from "./pages/candidate/CareerCoach";
-import Courses from "./pages/candidate/Courses";
-import Applications from "./pages/candidate/Applications";
-import Jobs from "./pages/candidate/Jobs";
-import JobDetails from "./pages/candidate/JobDetails";
-import CourseDetails from "./pages/candidate/CourseDetails";
-import Profile from "./pages/candidate/Profile";
-import ResumeOptimizer from "./pages/candidate/ResumeOptimizer";
-import InterviewPractice from "./pages/candidate/InterviewPractice";
-import OfflineTraining from "./pages/candidate/OfflineTraining";
-import Events from "./pages/candidate/Events";
-import MentorBooking from "./pages/candidate/MentorBooking";
-import Certificates from "./pages/candidate/Certificates";
-import Saved from "./pages/candidate/Saved";
-import Assistant from "./pages/candidate/Assistant";
-import AcademyDashboard from "./pages/roles/TutorDashboard";
-import RecruiterDashboard from "./pages/roles/RecruiterDashboard";
-import EmployerDashboard from "./pages/roles/EmployerDashboard";
+// Small structural components needed on every render — keep as static imports.
 import CandidateMenu from "./components/CandidateMenu";
-import AdminDashboard from "./pages/roles/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+// Tiny redirect shim — no meaningful bundle cost.
+import EmployerDashboard from "./pages/roles/EmployerDashboard";
+
+// ---------------------------------------------------------------------------
+// Route-level code splitting: each page is loaded only when first navigated to.
+// This keeps the initial bundle (landing page + login) small for anonymous users.
+// ---------------------------------------------------------------------------
+const LandingPage        = lazy(() => import("./pages/LandingPage"));
+const Register           = lazy(() => import("./pages/auth/Register"));
+const Login              = lazy(() => import("./pages/auth/Login"));
+const AuthCallback       = lazy(() => import("./pages/auth/AuthCallback"));
+const ForgotPassword     = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPassword      = lazy(() => import("./pages/auth/ResetPassword"));
+const SelectRole         = lazy(() => import("./pages/auth/SelectRole"));
+const CandidateDashboard = lazy(() => import("./pages/candidate/Dashboard"));
+const CareerCoach        = lazy(() => import("./pages/candidate/CareerCoach"));
+const Courses            = lazy(() => import("./pages/candidate/Courses"));
+const Applications       = lazy(() => import("./pages/candidate/Applications"));
+const Jobs               = lazy(() => import("./pages/candidate/Jobs"));
+const JobDetails         = lazy(() => import("./pages/candidate/JobDetails"));
+const CourseDetails      = lazy(() => import("./pages/candidate/CourseDetails"));
+const Profile            = lazy(() => import("./pages/candidate/Profile"));
+const ResumeOptimizer    = lazy(() => import("./pages/candidate/ResumeOptimizer"));
+const InterviewPractice  = lazy(() => import("./pages/candidate/InterviewPractice"));
+const OfflineTraining    = lazy(() => import("./pages/candidate/OfflineTraining"));
+const Events             = lazy(() => import("./pages/candidate/Events"));
+const MentorBooking      = lazy(() => import("./pages/candidate/MentorBooking"));
+const Certificates       = lazy(() => import("./pages/candidate/Certificates"));
+const Saved              = lazy(() => import("./pages/candidate/Saved"));
+const Assistant          = lazy(() => import("./pages/candidate/Assistant"));
+const AcademyDashboard   = lazy(() => import("./pages/roles/TutorDashboard"));
+const RecruiterDashboard = lazy(() => import("./pages/roles/RecruiterDashboard"));
+const AdminDashboard     = lazy(() => import("./pages/roles/AdminDashboard"));
 
 function CandidateLayout() {
   return (
@@ -58,10 +65,20 @@ function useWarmUpBackend() {
   }, []);
 }
 
+// Minimal full-page spinner shown while a lazy chunk is loading.
+function PageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#f7fbf9]">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#146c45] border-t-transparent" />
+    </div>
+  );
+}
+
 export default function App() {
   useWarmUpBackend();
   return (
     <BrowserRouter>
+      <Suspense fallback={<PageFallback />}>
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
@@ -134,6 +151,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

@@ -177,7 +177,7 @@ export default function TutorDashboard({ view = "dashboard" }: { view?: View }) 
         setStudentsByCourse(Object.fromEntries(entries));
       }).catch((err: Error) => setMessage({ text: err.message, type: "error" }));
     });
-  }, [navigate]);
+  }, [navigate, editCourseId]);
 
   async function saveCourse(event: React.FormEvent) {
     event.preventDefault();

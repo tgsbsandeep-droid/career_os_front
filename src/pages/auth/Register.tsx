@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   getCachedUser,
@@ -36,18 +36,18 @@ export default function Register() {
   const [checkingSession, setCheckingSession] = useState(!isSessionReady() || Boolean(getCachedUser()));
   const redirected = useRef(false);
 
-  function goNext(user: Parameters<typeof getDashboardPath>[0]) {
+  const goNext = useCallback((user: Parameters<typeof getDashboardPath>[0]) => {
     if (redirected.current || !user) return;
     redirected.current = true;
     navigate(needsRoleSelection(user) ? "/select-role" : getDashboardPath(user), { replace: true });
-  }
+  }, [navigate]);
 
   useEffect(() => {
     return subscribeToUser((user) => {
       if (user) { goNext(user); return; }
       setCheckingSession(false);
     });
-  }, [navigate]);
+  }, [goNext]);
 
   function chooseRole(next: AppRole) {
     if (next === "admin") return;
