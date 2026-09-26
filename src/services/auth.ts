@@ -231,14 +231,22 @@ export async function persistProfile(user: User, extras: { full_name?: string; r
   });
   if (metaError) throw metaError;
 
+  // The profiles.role check constraint only allows:
+  //   ('candidate', 'tutor', 'recruiter', 'employer', 'admin')
+  // Map frontend canonical names to DB-compatible values before writing.
+  function toDbRole(r: AppRole): string {
+    if (r === "academy") return "tutor";
+    return r;
+  }
+  const dbRoles = roles.map(toDbRole);
   const profileRow = {
     id: user.id,
     full_name: fullName,
-    role: active === "academy" ? "tutor" : active,
+    role: toDbRole(active),
     status: "active",
     updated_at: new Date().toISOString(),
   };
-  const withRoles = await supabase.from("profiles").upsert({ ...profileRow, roles });
+  const withRoles = await supabase.from("profiles").upsert({ ...profileRow, roles: dbRoles });
   if (withRoles.error) {
     const { error } = await supabase.from("profiles").upsert(profileRow);
     if (error) throw error;
