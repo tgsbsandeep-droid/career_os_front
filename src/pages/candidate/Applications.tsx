@@ -286,7 +286,7 @@ export default function Applications() {
                         {/* Status badge */}
                         <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${cfg.color}`}>
                           {cfg.icon}
-                          {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                          {(app.status || "unknown").charAt(0).toUpperCase() + (app.status || "unknown").slice(1)}
                         </span>
 
 

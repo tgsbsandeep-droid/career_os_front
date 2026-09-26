@@ -55,6 +55,11 @@ const skillSuggestions = [
   "Docker", "Data analysis", "UI/UX design", "Communication", "Leadership", "Project management",
 ];
 
+function studentInitial(name: string | null | undefined): string {
+  const s = name || "";
+  return s.length > 0 ? s[0].toUpperCase() : "?";
+}
+
 function normalizeSkillName(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -489,7 +494,7 @@ function StudentsView({ courses, studentsByCourse }: {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6f0] text-[13px] font-bold text-[#146c45]">
-                        {(student.profile?.full_name || "?")[0].toUpperCase()}
+                        {studentInitial(student.profile?.full_name)}
                       </div>
                       <div>
                         <p className="font-semibold text-[#12241c]">{student.profile?.full_name ?? `Student ${student.candidate_id.slice(0, 8)}`}</p>
@@ -1474,7 +1479,7 @@ function CertificatesView({ courses, studentsByCourse }: { courses: Course[]; st
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6f0] text-[13px] font-bold text-[#146c45]">
-                        {(student.profile?.full_name || "?")[0].toUpperCase()}
+                        {studentInitial(student.profile?.full_name)}
                       </div>
                       <p className="font-semibold text-[#12241c]">{student.profile?.full_name ?? `Student ${student.candidate_id.slice(0, 8)}`}</p>
                     </div>
@@ -1676,7 +1681,7 @@ function AttendanceView({ courses, studentsByCourse }: { courses: Course[]; stud
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2.5">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6f0] text-[13px] font-bold text-[#146c45]">
-                          {(student.profile?.full_name || "?")[0].toUpperCase()}
+                          {studentInitial(student.profile?.full_name)}
                         </div>
                         <p className="font-semibold text-[#12241c]">{student.profile?.full_name ?? `Student ${student.candidate_id.slice(0, 8)}`}</p>
                       </div>
