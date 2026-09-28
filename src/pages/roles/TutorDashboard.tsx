@@ -497,7 +497,7 @@ function StudentsView({ courses, studentsByCourse }: {
                         {studentInitial(student.profile?.full_name)}
                       </div>
                       <div>
-                        <p className="font-semibold text-[#12241c]">{student.profile?.full_name ?? `Student ${student.candidate_id.slice(0, 8)}`}</p>
+                        <p className="font-semibold text-[#12241c]">{student.profile?.full_name || `Student ${student.candidate_id.slice(0, 8)}`}</p>
                         {student.profile?.contact_email && (
                           <p className="text-[11px] text-[#7a8b84]">{student.profile.contact_email}</p>
                         )}
@@ -1481,7 +1481,7 @@ function CertificatesView({ courses, studentsByCourse }: { courses: Course[]; st
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6f0] text-[13px] font-bold text-[#146c45]">
                         {studentInitial(student.profile?.full_name)}
                       </div>
-                      <p className="font-semibold text-[#12241c]">{student.profile?.full_name ?? `Student ${student.candidate_id.slice(0, 8)}`}</p>
+                      <p className="font-semibold text-[#12241c]">{student.profile?.full_name || `Student ${student.candidate_id.slice(0, 8)}`}</p>
                     </div>
                   </td>
                   <td className="px-5 py-4 text-[#3d4d46] max-w-[180px] truncate">{course.title}</td>
@@ -1683,7 +1683,7 @@ function AttendanceView({ courses, studentsByCourse }: { courses: Course[]; stud
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6f0] text-[13px] font-bold text-[#146c45]">
                           {studentInitial(student.profile?.full_name)}
                         </div>
-                        <p className="font-semibold text-[#12241c]">{student.profile?.full_name ?? `Student ${student.candidate_id.slice(0, 8)}`}</p>
+                        <p className="font-semibold text-[#12241c]">{student.profile?.full_name || `Student ${student.candidate_id.slice(0, 8)}`}</p>
                       </div>
                     </td>
                     <td className="px-5 py-4">
