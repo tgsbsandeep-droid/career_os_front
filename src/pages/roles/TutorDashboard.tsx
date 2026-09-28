@@ -55,6 +55,14 @@ const skillSuggestions = [
   "Docker", "Data analysis", "UI/UX design", "Communication", "Leadership", "Project management",
 ];
 
+function studentDisplayName(profile: { full_name?: string; contact_email?: string } | null | undefined, candidateId: string): string {
+  const name = profile?.full_name?.trim();
+  if (name) return name;
+  const email = profile?.contact_email?.trim();
+  if (email) return email.split("@")[0];
+  return `Student ${candidateId.slice(0, 8)}`;
+}
+
 function studentInitial(name: string | null | undefined): string {
   const s = name || "";
   return s.length > 0 ? s[0].toUpperCase() : "?";
@@ -494,10 +502,10 @@ function StudentsView({ courses, studentsByCourse }: {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6f0] text-[13px] font-bold text-[#146c45]">
-                        {studentInitial(student.profile?.full_name)}
+                        {studentInitial(studentDisplayName(student.profile, student.candidate_id))}
                       </div>
                       <div>
-                        <p className="font-semibold text-[#12241c]">{student.profile?.full_name || `Student ${student.candidate_id.slice(0, 8)}`}</p>
+                        <p className="font-semibold text-[#12241c]">{studentDisplayName(student.profile, student.candidate_id)}</p>
                         {student.profile?.contact_email && (
                           <p className="text-[11px] text-[#7a8b84]">{student.profile.contact_email}</p>
                         )}
@@ -1479,9 +1487,9 @@ function CertificatesView({ courses, studentsByCourse }: { courses: Course[]; st
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6f0] text-[13px] font-bold text-[#146c45]">
-                        {studentInitial(student.profile?.full_name)}
+                        {studentInitial(studentDisplayName(student.profile, student.candidate_id))}
                       </div>
-                      <p className="font-semibold text-[#12241c]">{student.profile?.full_name || `Student ${student.candidate_id.slice(0, 8)}`}</p>
+                      <p className="font-semibold text-[#12241c]">{studentDisplayName(student.profile, student.candidate_id)}</p>
                     </div>
                   </td>
                   <td className="px-5 py-4 text-[#3d4d46] max-w-[180px] truncate">{course.title}</td>
@@ -1681,9 +1689,9 @@ function AttendanceView({ courses, studentsByCourse }: { courses: Course[]; stud
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2.5">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf6f0] text-[13px] font-bold text-[#146c45]">
-                          {studentInitial(student.profile?.full_name)}
+                          {studentInitial(studentDisplayName(student.profile, student.candidate_id))}
                         </div>
-                        <p className="font-semibold text-[#12241c]">{student.profile?.full_name || `Student ${student.candidate_id.slice(0, 8)}`}</p>
+                        <p className="font-semibold text-[#12241c]">{studentDisplayName(student.profile, student.candidate_id)}</p>
                       </div>
                     </td>
                     <td className="px-5 py-4">
