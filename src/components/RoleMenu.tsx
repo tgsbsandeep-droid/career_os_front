@@ -196,7 +196,7 @@ export default function RoleMenu({
               ))}
               {groups.map((group) => (
                 <div key={group.id} className="mt-3">
-                  <p className="px-3 pb-1 text-[11px] font-semibold tracking-[0.12em] text-[#7a8b84]">{group.label.toUpperCase()}</p>
+                  <p className="px-3 pb-1 text-[11px] font-semibold tracking-[0.12em] text-[#7a8b84]">{group.label?.toUpperCase()}</p>
                   {group.items.map((item) => (
                     <NavLink key={item.to} to={item.to} onClick={() => setPanelOpen(false)} className={menuLink}>
                       {item.icon}{item.label}

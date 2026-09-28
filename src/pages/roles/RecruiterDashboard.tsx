@@ -1901,7 +1901,7 @@ function AnalyticsPipelineBoard({
           const keep = pct(step.value, prev);
           return (
             <div key={step.key} className="rounded-xl bg-[#f7fbf9] px-3 py-3">
-              <p className="text-[11px] font-semibold tracking-[0.08em] text-[#7a8b84]">{step.label.toUpperCase()}</p>
+              <p className="text-[11px] font-semibold tracking-[0.08em] text-[#7a8b84]">{step.label?.toUpperCase()}</p>
               <p className="mt-1 text-[22px] font-semibold text-[#12241c]">{step.value}</p>
               <p className="text-[11px] text-[#5b6b64]">{index === 0 ? "in pipeline" : `${keep}% of previous`}</p>
               <div className="mt-2 h-1.5 rounded-full bg-white">
