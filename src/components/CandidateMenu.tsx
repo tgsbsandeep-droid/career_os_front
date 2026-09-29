@@ -176,7 +176,7 @@ export default function CandidateMenu() {
                   {group.label}
                   <ChevronDown size={14} className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
                 </button>
-                {open && (
+                {open && !panelOpen && (
                   <div role="menu" className="absolute left-0 top-full z-50 mt-1 w-56 rounded-2xl border border-[#e4eee9] bg-white p-1.5 shadow-[0_18px_40px_-28px_rgba(18,50,36,0.28)]">
                     {group.items.map(({ label, to, icon: Icon }) => (
                       <NavLink key={to} to={to} role="menuitem" onClick={() => setOpenGroup(null)} className={menuLink}>
@@ -205,7 +205,7 @@ export default function CandidateMenu() {
             >
               <UserRound size={16} />
             </button>
-            {accountOpen && (
+            {accountOpen && !panelOpen && (
               <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-[#e4eee9] bg-white p-1.5 shadow-[0_18px_40px_-28px_rgba(18,50,36,0.28)]">
                 <NavLink to={profileItem.to} role="menuitem" onClick={() => setOpenGroup(null)} className={menuLink}>
                   <UserRound size={16} />
