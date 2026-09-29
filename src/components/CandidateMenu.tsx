@@ -240,7 +240,7 @@ export default function CandidateMenu() {
       </div>
 
       {panelOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <button type="button" aria-label="Close menu overlay" className="absolute inset-0 bg-[#12241c]/30" onClick={() => setPanelOpen(false)} />
           <aside className="absolute right-0 top-0 flex h-full w-[min(320px,86vw)] flex-col border-l border-[#e4eee9] bg-white shadow-[0_24px_60px_-20px_rgba(18,50,36,0.35)]">
             <div className="flex items-center justify-between border-b border-[#e4eee9] px-4 py-4">
