@@ -1806,8 +1806,8 @@ function BulkView({ applicants, jobs, onUpdateStatus, onMessage }: {
         </button>
       </div>
       {rows.length === 0 ? <Empty text="No applicants to bulk-update." /> : (
-        <div className="rounded-[22px] border border-white bg-white shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)] overflow-hidden">
-          <table className="w-full text-[13px]">
+        <div className="overflow-x-auto rounded-[22px] border border-white bg-white shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)]">
+          <table className="w-full min-w-[520px] text-[13px]">
             <thead>
               <tr className="border-b border-[#eef3f0] bg-[#f7fbf9]">
                 <th className="px-5 py-3.5 text-left">

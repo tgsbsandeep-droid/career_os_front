@@ -486,8 +486,8 @@ function StudentsView({ courses, studentsByCourse }: {
           <p className="mt-1 text-[13px] text-[#7a8b84]">Students will appear here once they enrol in your courses.</p>
         </div>
       ) : (
-        <div className="rounded-[22px] border border-white bg-white shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)] overflow-hidden">
-          <table className="w-full text-[13px]">
+        <div className="overflow-x-auto rounded-[22px] border border-white bg-white shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)]">
+          <table className="w-full min-w-[560px] text-[13px]">
             <thead>
               <tr className="border-b border-[#eef3f0] bg-[#f7fbf9]">
                 <th className="px-5 py-3.5 text-left font-semibold text-[#5b6b64]">Student</th>
@@ -1471,8 +1471,8 @@ function CertificatesView({ courses, studentsByCourse }: { courses: Course[]; st
       {completedStudents.length === 0 ? (
         <Empty text="No students have completed a course yet. Certificates will appear here once students reach 100% progress." />
       ) : (
-        <div className="rounded-[22px] border border-white bg-white shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)] overflow-hidden">
-          <table className="w-full text-[13px]">
+        <div className="overflow-x-auto rounded-[22px] border border-white bg-white shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)]">
+          <table className="w-full min-w-[520px] text-[13px]">
             <thead>
               <tr className="border-b border-[#eef3f0] bg-[#f7fbf9]">
                 <th className="px-5 py-3.5 text-left font-semibold text-[#5b6b64]">Student</th>
@@ -1672,8 +1672,8 @@ function AttendanceView({ courses, studentsByCourse }: { courses: Course[]; stud
       {students.length === 0 ? (
         <Empty text="No enrolled learners for this course yet. Attendance rows appear after enrolments." />
       ) : (
-        <div className="rounded-[22px] border border-white bg-white shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)] overflow-hidden">
-          <table className="w-full text-[13px]">
+        <div className="overflow-x-auto rounded-[22px] border border-white bg-white shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)]">
+          <table className="w-full min-w-[480px] text-[13px]">
             <thead>
               <tr className="border-b border-[#eef3f0] bg-[#f7fbf9]">
                 <th className="px-5 py-3.5 text-left font-semibold text-[#5b6b64]">Student</th>
