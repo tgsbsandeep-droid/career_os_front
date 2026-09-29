@@ -1,0 +1,17 @@
+name: Keep Backend Alive
+
+on:
+  schedule:
+    # Runs every 14 minutes — keeps Render free-tier from sleeping (sleeps after 15 min idle)
+    - cron: "*/14 * * * *"
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          curl -sf --max-time 30 https://career-os-back.onrender.com/api/health \
+            && echo "Backend is awake" \
+            || echo "Ping failed (backend may be cold-starting)"
