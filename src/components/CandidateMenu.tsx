@@ -127,6 +127,7 @@ export default function CandidateMenu() {
 
   useEffect(() => {
     document.body.style.overflow = panelOpen ? "hidden" : "";
+    if (panelOpen) setOpenGroup(null);
     return () => { document.body.style.overflow = ""; };
   }, [panelOpen]);
 
@@ -230,7 +231,7 @@ export default function CandidateMenu() {
             type="button"
             aria-expanded={panelOpen}
             aria-label={panelOpen ? "Close menu" : "Open menu"}
-            onClick={() => setPanelOpen((value) => !value)}
+            onClick={() => { setOpenGroup(null); setPanelOpen((value) => !value); }}
             className="grid h-11 w-11 place-items-center rounded-xl text-[#12241c] transition duration-200 hover:bg-[#f0f7f3] lg:hidden"
           >
             {panelOpen ? <X size={20} /> : <Menu size={20} />}

@@ -60,6 +60,7 @@ export default function RoleMenu({
 
   useEffect(() => {
     document.body.style.overflow = panelOpen ? "hidden" : "";
+    if (panelOpen) setOpenMenu(null);
     return () => { document.body.style.overflow = ""; };
   }, [panelOpen]);
 
@@ -169,7 +170,7 @@ export default function RoleMenu({
             <button
               type="button"
               aria-label={panelOpen ? "Close menu" : "Open menu"}
-              onClick={() => setPanelOpen((value) => !value)}
+              onClick={() => { setOpenMenu(null); setPanelOpen((value) => !value); }}
               className="grid h-11 w-11 place-items-center rounded-xl text-[#12241c] transition duration-200 hover:bg-[#f0f7f3] lg:hidden"
             >
               {panelOpen ? <X size={20} /> : <Menu size={20} />}
