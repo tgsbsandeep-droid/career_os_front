@@ -94,6 +94,7 @@ export default function Courses() {
     const s = searchParams.get("skills");
     return s ? s.split(",").map((x) => x.trim()).filter(Boolean) : [];
   });
+  const [activeTab, setActiveTab]             = useState<"all" | "my">("all");
   const [deliveryFilter, setDeliveryFilter]   = useState("All");
   const [levelFilter, setLevelFilter]         = useState("All levels");
   const [sortBy, setSortBy]                   = useState("Most popular");
@@ -172,6 +173,7 @@ export default function Courses() {
 
   const filtered = availableCourses
     .filter((c) => {
+      if (activeTab === "my" && !enrollments.has(c.id)) return false;
       const q = query.toLowerCase();
       const matchesQuery = !q || `${c.title} ${c.level} ${c.provider} ${(c.skills ?? []).join(" ")} ${c.instructor_name ?? ""}`.toLowerCase().includes(q);
       const matchesDelivery =
@@ -198,22 +200,39 @@ export default function Courses() {
       <div className="mx-auto max-w-[1180px] px-5 py-8 space-y-6">
 
         {/* Header */}
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[12px] font-semibold tracking-[0.16em] text-[#157a4f]">LEARNING CATALOG</p>
-            <h1 className="mt-2 font-[family-name:var(--font-display)] text-[32px] font-semibold leading-tight tracking-[-0.025em] text-[#12241c]">
-              Courses
-            </h1>
-            <p className="mt-2 text-[15px] leading-7 text-[#5b6b64]">
-              {loading ? "Loading…" : `${filtered.length} course${filtered.length !== 1 ? "s" : ""} available`}
-            </p>
-          </div>
-          {enrolledCount > 0 && (
-            <div className="flex items-center gap-2 rounded-full border border-[#cfe6db] bg-[#eaf6f0] px-4 py-2.5 text-[13px] font-semibold text-[#146c45]">
-              <CheckCircle2 size={16} />
-              {enrolledCount} enrolled
-            </div>
-          )}
+        <div>
+          <p className="text-[12px] font-semibold tracking-[0.16em] text-[#157a4f]">LEARNING CATALOG</p>
+          <h1 className="mt-2 font-[family-name:var(--font-display)] text-[32px] font-semibold leading-tight tracking-[-0.025em] text-[#12241c]">
+            Courses
+          </h1>
+          <p className="mt-2 text-[15px] leading-7 text-[#5b6b64]">
+            {loading ? "Loading…" : `${filtered.length} course${filtered.length !== 1 ? "s" : ""} ${activeTab === "my" ? "enrolled" : "available"}`}
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 rounded-xl border border-[#e4eee9] bg-white p-1 w-fit">
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold transition ${activeTab === "all" ? "bg-[#146c45] text-white shadow-sm" : "text-[#5b6b64] hover:bg-[#f0f7f3]"}`}
+          >
+            <BookOpen size={15} />
+            All Courses
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("my")}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold transition ${activeTab === "my" ? "bg-[#146c45] text-white shadow-sm" : "text-[#5b6b64] hover:bg-[#f0f7f3]"}`}
+          >
+            <CheckCircle2 size={15} />
+            My Courses
+            {enrolledCount > 0 && (
+              <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold ${activeTab === "my" ? "bg-white/20 text-white" : "bg-[#eaf6f0] text-[#146c45]"}`}>
+                {enrolledCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Recommendation banner — shown when arriving from CareerCoach */}
@@ -317,8 +336,20 @@ export default function Courses() {
         {!loading && filtered.length === 0 && (
           <div className="rounded-[22px] border border-white bg-white p-12 text-center shadow-[0_18px_40px_-28px_rgba(18,50,36,0.18)]">
             <BookOpen size={36} className="mx-auto text-[#c9d6cf]" />
-            <p className="mt-3 font-semibold text-[#12241c]">No courses found</p>
-            <p className="mt-1 text-[13px] text-[#7a8b84]">Try adjusting your search or filters.</p>
+            {activeTab === "my" ? (
+              <>
+                <p className="mt-3 font-semibold text-[#12241c]">No enrolled courses yet</p>
+                <p className="mt-1 text-[13px] text-[#7a8b84]">Browse the catalog and enrol in a course to see it here.</p>
+                <button type="button" onClick={() => setActiveTab("all")} className="mt-4 rounded-full bg-[#146c45] px-5 py-2.5 text-[13px] font-semibold text-white hover:bg-[#0f5a39] transition">
+                  Browse courses
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 font-semibold text-[#12241c]">No courses found</p>
+                <p className="mt-1 text-[13px] text-[#7a8b84]">Try adjusting your search or filters.</p>
+              </>
+            )}
           </div>
         )}
 
