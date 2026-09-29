@@ -224,7 +224,7 @@ export default function CandidateMenu() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1">
-          <RoleSwitcher />
+          <span className="hidden sm:block"><RoleSwitcher /></span>
           <NotificationBell />
           <button
             type="button"
