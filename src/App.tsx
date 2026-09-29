@@ -54,15 +54,24 @@ function CandidateLayout() {
 }
 
 // Fire-and-forget warm-up ping so Render free-tier wakes up before the user
-// needs the API. Errors are intentionally swallowed.
+// needs the API. Retries up to 4 times with 8s gaps to handle cold starts.
+// Errors are intentionally swallowed.
 const API_BASE = String(import.meta.env.VITE_API_URL ?? "").trim().replace(/\/$/, "")
   || (import.meta.env.PROD ? "https://career-os-back.onrender.com" : "");
 
+async function pingBackend(retries = 4, delayMs = 8000) {
+  if (!API_BASE) return;
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(`${API_BASE}/api/health`, { method: "GET", keepalive: true });
+      if (res.ok) return; // backend is awake
+    } catch { /* ignore network errors */ }
+    if (i < retries - 1) await new Promise((r) => setTimeout(r, delayMs));
+  }
+}
+
 function useWarmUpBackend() {
-  useEffect(() => {
-    if (!API_BASE) return;
-    fetch(`${API_BASE}/api/health`, { method: "GET" }).catch(() => {/* ignore */});
-  }, []);
+  useEffect(() => { void pingBackend(); }, []);
 }
 
 // Minimal full-page spinner shown while a lazy chunk is loading.
