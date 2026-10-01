@@ -280,12 +280,21 @@ export default function JobApplyModal({
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={labelClass}>Notice period</span>
-                <input
+                <select
                   value={form.noticePeriod}
                   onChange={(e) => setForm({ ...form, noticePeriod: e.target.value })}
-                  placeholder="Immediate / 30 days"
                   className={`${inputClass} mt-1.5`}
-                />
+                >
+                  <option value="">Select notice period</option>
+                  <option value="Immediate">Immediate</option>
+                  <option value="15 days">15 days</option>
+                  <option value="30 days">30 days</option>
+                  <option value="45 days">45 days</option>
+                  <option value="60 days">60 days</option>
+                  <option value="90 days">90 days</option>
+                  <option value="3 months">3 months</option>
+                  <option value="6 months">6 months</option>
+                </select>
               </label>
               <label className="block">
                 <span className={labelClass}>Expected CTC</span>
