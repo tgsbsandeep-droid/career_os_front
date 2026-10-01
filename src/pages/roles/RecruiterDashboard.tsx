@@ -2115,8 +2115,10 @@ function AnalyticsView({
 
 function ApplicantCard({ applicant, subtitle, onStatus }: { applicant: Applicant; subtitle?: string; onStatus: (status: string) => void }) {
   const [open, setOpen] = useState(false);
+  // Signed URL generated on demand — never expose the raw storage path as an href.
+  const [signedResumeUrl, setSignedResumeUrl] = useState<string | null>(null);
   const cfg = stageConfig[applicant.status] ?? { color: "bg-[#eef3f0] text-[#5b6b64]", bar: "", icon: null };
-  const resume = applicant.resume_url || applicant.candidate?.resume_url;
+  const resumePath = applicant.resume_url || applicant.candidate?.resume_url;
   const skills = applicant.candidate?.skills ?? [];
   const experience = asExperienceList(applicant.candidate?.experience);
   const coverLetter = applicantCoverLetter(applicant);
@@ -2126,6 +2128,14 @@ function ApplicantCard({ applicant, subtitle, onStatus }: { applicant: Applicant
 
   useEffect(() => {
     if (!open) return;
+    // Generate a 1-hour signed URL when the card is opened so the CV is never
+    // accessible via a permanent public link.
+    if (resumePath) {
+      void supabase.storage
+        .from("resumes")
+        .createSignedUrl(resumePath, 3600)
+        .then(({ data }) => { if (data?.signedUrl) setSignedResumeUrl(data.signedUrl); });
+    }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
     }
@@ -2175,8 +2185,8 @@ function ApplicantCard({ applicant, subtitle, onStatus }: { applicant: Applicant
             </select>
           </div>
         </div>
-        {resume && (
-          <a href={resume} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#146c45] hover:underline">
+        {resumePath && (
+          <a href={signedResumeUrl ?? "#"} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#146c45] hover:underline">
             <ExternalLink size={12} /> Preview resume
           </a>
         )}
@@ -2270,8 +2280,8 @@ function ApplicantCard({ applicant, subtitle, onStatus }: { applicant: Applicant
                   <p className="mt-1.5 whitespace-pre-wrap text-[14px] leading-6 text-[#3d4d46]">{parsedNotes.extra}</p>
                 </section>
               )}
-              {resume && (
-                <a href={resume} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#146c45] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#0f5a39]">
+              {resumePath && (
+                <a href={signedResumeUrl ?? "#"} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#146c45] px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-[#0f5a39]">
                   <ExternalLink size={14} /> Open resume
                 </a>
               )}

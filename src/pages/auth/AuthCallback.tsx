@@ -1,15 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDashboardPath, isPasswordRecoveryRedirect, needsRoleSelection, subscribeToUser } from "../../services/auth";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  // Track whether we've already navigated away to avoid double-navigation.
+  const navigated = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const authError = params.get("error_description") || params.get("error") || hash.get("error_description");
+
+    // Surface any OAuth error immediately.
+    const authError =
+      params.get("error_description") ||
+      params.get("error") ||
+      hash.get("error_description") ||
+      hash.get("error");
     if (authError) {
       setError(authError.replace(/\+/g, " "));
       return;
@@ -20,8 +28,20 @@ export default function AuthCallback() {
       return;
     }
 
-    return subscribeToUser((user) => {
-      if (!user) return;
+    // With PKCE flow the Supabase JS client exchanges the `code` param for a
+    // session automatically (detectSessionInUrl: true). This fires an
+    // SIGNED_IN event which subscribeToUser will deliver. We just wait for it.
+    //
+    // With implicit flow the access_token is in the hash; the client parses it
+    // on initialisation and fires the same event.
+    //
+    // In both cases we must NOT navigate away on a null user — that just means
+    // the exchange hasn't completed yet.
+    const unsub = subscribeToUser((user) => {
+      if (!user) return; // still exchanging — keep waiting
+      if (navigated.current) return;
+      navigated.current = true;
+
       if (isPasswordRecoveryRedirect()) {
         navigate("/auth/reset-password" + window.location.search + window.location.hash, { replace: true });
         return;
@@ -32,6 +52,20 @@ export default function AuthCallback() {
       }
       navigate(getDashboardPath(user), { replace: true });
     });
+
+    // Safety net: if after 15 s we still have no user, something went wrong.
+    // Redirect to login with a generic error rather than spinning forever.
+    const timeout = setTimeout(() => {
+      if (!navigated.current) {
+        navigated.current = true;
+        navigate("/login?error=timeout", { replace: true });
+      }
+    }, 15_000);
+
+    return () => {
+      unsub();
+      clearTimeout(timeout);
+    };
   }, [navigate]);
 
   if (error) {

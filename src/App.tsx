@@ -5,6 +5,8 @@ import {
   Routes,
   Route,
   Navigate,
+  useNavigate,
+  useLocation,
 } from "react-router-dom";
 
 // Small structural components needed on every render — keep as static imports.
@@ -43,6 +45,46 @@ const Assistant          = lazy(() => import("./pages/candidate/Assistant"));
 const AcademyDashboard   = lazy(() => import("./pages/roles/TutorDashboard"));
 const RecruiterDashboard = lazy(() => import("./pages/roles/RecruiterDashboard"));
 const AdminDashboard     = lazy(() => import("./pages/roles/AdminDashboard"));
+
+/**
+ * Detects when Supabase redirects back to the root URL with OAuth tokens.
+ * This happens when the Supabase dashboard "Site URL" or redirect allow-list
+ * is set to the bare origin (e.g. https://career-os-front.pages.dev) instead
+ * of the full callback path (/auth/callback).
+ *
+ * With implicit flow:  /#access_token=...
+ * With PKCE flow:      /?code=...
+ *
+ * In both cases we forward to /auth/callback preserving the search + hash so
+ * AuthCallback can finish the sign-in.
+ */
+function OAuthRootRedirect() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const search = new URLSearchParams(location.search);
+    const hasOAuthHash =
+      hash.has("access_token") || hash.has("error") || hash.has("error_description");
+    const hasOAuthCode = search.has("code") || search.has("error");
+
+    if (hasOAuthHash || hasOAuthCode) {
+      navigate("/auth/callback" + location.search + location.hash, { replace: true });
+    }
+  }, [navigate, location]);
+
+  return null; // render nothing — LandingPage is rendered by the parent route
+}
+
+function RootRoute() {
+  return (
+    <>
+      <OAuthRootRedirect />
+      <LandingPage />
+    </>
+  );
+}
 
 function CandidateLayout() {
   return (
@@ -90,7 +132,7 @@ export default function App() {
       <Suspense fallback={<PageFallback />}>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<RootRoute />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

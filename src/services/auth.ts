@@ -31,16 +31,60 @@ const ROLE_LABELS: Record<AppRole, string> = {
 
 let cachedUser: User | null = null;
 let sessionReady = false;
+// When setActiveRole patches cachedUser, the next onAuthStateChange event may
+// arrive with a JWT that still carries the old active_role (Supabase re-issues
+// the token asynchronously). We keep the intended role here and apply it on top
+// of whatever onAuthStateChange delivers, until the JWT itself reflects it.
+let pendingActiveRole: AppRole | null = null;
 const sessionListeners = new Set<(user: User | null) => void>();
 
 supabase.auth.onAuthStateChange((_event, session) => {
-  cachedUser = session?.user ?? null;
+  const incoming = session?.user ?? null;
+  if (incoming && pendingActiveRole) {
+    const jwtRole = aliasRole(
+      (incoming.user_metadata as Record<string, unknown> | undefined)?.active_role,
+    );
+    if (jwtRole === pendingActiveRole) {
+      // JWT now reflects the switch — clear the pending override.
+      pendingActiveRole = null;
+      cachedUser = incoming;
+    } else {
+      // JWT is still stale — keep our patch in place.
+      cachedUser = {
+        ...incoming,
+        user_metadata: {
+          ...(incoming.user_metadata as Record<string, unknown>),
+          active_role: pendingActiveRole,
+          role: pendingActiveRole,
+        },
+      };
+    }
+  } else {
+    cachedUser = incoming;
+  }
   sessionReady = true;
   sessionListeners.forEach((listener) => listener(cachedUser));
 });
 
 void supabase.auth.getSession().then(({ data }) => {
-  cachedUser = data.session?.user ?? null;
+  const incoming = data.session?.user ?? null;
+  if (incoming && pendingActiveRole) {
+    const jwtRole = aliasRole(
+      (incoming.user_metadata as Record<string, unknown> | undefined)?.active_role,
+    );
+    cachedUser = jwtRole === pendingActiveRole
+      ? (pendingActiveRole = null, incoming)
+      : {
+          ...incoming,
+          user_metadata: {
+            ...(incoming.user_metadata as Record<string, unknown>),
+            active_role: pendingActiveRole,
+            role: pendingActiveRole,
+          },
+        };
+  } else {
+    cachedUser = incoming;
+  }
   sessionReady = true;
   sessionListeners.forEach((listener) => listener(cachedUser));
 });
@@ -198,6 +242,14 @@ export function normalizePhone(input: string) {
   return digits ? `+${digits.replace(/^\+/, "")}` : "";
 }
 
+// The profiles.role check constraint only allows:
+//   ('candidate', 'tutor', 'recruiter', 'employer', 'admin')
+// Map frontend canonical names to DB-compatible values before writing.
+function toDbRole(r: AppRole): string {
+  if (r === "academy") return "tutor";
+  return r;
+}
+
 export async function persistProfile(user: User, extras: { full_name?: string; roles: AppRole[]; active_role?: AppRole }) {
   const publicRoles = sanitizeSignupRoles(extras.roles);
   const held = sanitizeSignupRoles(getUserRoles(user));
@@ -231,13 +283,6 @@ export async function persistProfile(user: User, extras: { full_name?: string; r
   });
   if (metaError) throw metaError;
 
-  // The profiles.role check constraint only allows:
-  //   ('candidate', 'tutor', 'recruiter', 'employer', 'admin')
-  // Map frontend canonical names to DB-compatible values before writing.
-  function toDbRole(r: AppRole): string {
-    if (r === "academy") return "tutor";
-    return r;
-  }
   const dbRoles = roles.map(toDbRole);
   const profileRow = {
     id: user.id,
@@ -265,9 +310,46 @@ export async function setActiveRole(role: string) {
   }
   const roles = getUserRoles(data.user);
   if (!roles.includes(mapped)) throw new Error("You do not have that role yet");
-  await persistProfile(data.user, { roles, active_role: mapped });
-  const refreshed = await supabase.auth.getUser();
-  return refreshed.data.user;
+
+  // Set pendingActiveRole BEFORE calling updateUser so that the USER_UPDATED
+  // onAuthStateChange event (which fires during the await) doesn't overwrite
+  // cachedUser with the stale JWT before we get a chance to patch it.
+  pendingActiveRole = mapped;
+
+  // Lightweight: only update active_role in auth metadata. The full role list
+  // is unchanged when switching, so we don't need to rewrite it.
+  const { error: metaError } = await supabase.auth.updateUser({
+    data: { active_role: mapped, role: mapped },
+  });
+  if (metaError) {
+    pendingActiveRole = null; // roll back on failure
+    throw metaError;
+  }
+
+  // Patch cachedUser immediately so RoleSwitcher and ProtectedRoute see the
+  // correct active_role right away.
+  const patchedUser: typeof data.user = {
+    ...data.user,
+    user_metadata: {
+      ...(data.user.user_metadata as Record<string, unknown>),
+      active_role: mapped,
+      role: mapped,
+    },
+  };
+  cachedUser = patchedUser;
+  sessionListeners.forEach((listener) => listener(cachedUser));
+
+  // Best-effort: sync profiles.role to the DB. A failure here does not block
+  // the switch — the auth metadata is already updated.
+  supabase
+    .from("profiles")
+    .update({ role: toDbRole(mapped), updated_at: new Date().toISOString() })
+    .eq("id", data.user.id)
+    .then(({ error: dbErr }) => {
+      if (dbErr) console.warn("[setActiveRole] profiles sync failed:", dbErr.message);
+    });
+
+  return patchedUser;
 }
 
 export async function addUserRoles(extra: AppRole[], fullName?: string) {
@@ -281,9 +363,20 @@ export async function addUserRoles(extra: AppRole[], fullName?: string) {
     throw new Error(already.length ? "That role is already on this account." : "Select a new role to add.");
   }
   const roles = uniqueRoles([...current, ...added, ...(appMetadataHasAdmin(data.user) ? (["admin"] as AppRole[]) : [])]);
-  await persistProfile(data.user, { full_name: fullName, roles, active_role: added[0] ?? getUserRole(data.user) });
-  const refreshed = await supabase.auth.getUser();
-  return refreshed.data.user;
+  const newActiveRole = added[0] ?? getUserRole(data.user);
+  await persistProfile(data.user, { full_name: fullName, roles, active_role: newActiveRole });
+  const addPatchedUser: typeof data.user = {
+    ...data.user,
+    user_metadata: {
+      ...(data.user.user_metadata as Record<string, unknown>),
+      active_role: newActiveRole,
+      role: newActiveRole,
+    },
+  };
+  cachedUser = addPatchedUser;
+  sessionListeners.forEach((listener) => listener(cachedUser));
+  void supabase.auth.refreshSession();
+  return addPatchedUser;
 }
 
 export async function signInWithGoogle() {

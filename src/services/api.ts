@@ -8,6 +8,10 @@ const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      // Use PKCE (Proof Key for Code Exchange) — the modern, more secure OAuth
+      // flow. Supabase will redirect back with ?code=... instead of #access_token=...
+      // Requires the Supabase dashboard redirect URL to include /auth/callback.
+      flowType: "pkce",
     },
   },
 );
@@ -29,11 +33,18 @@ function resolveApiUrl(path: string) {
 // This handles Render free-tier cold-starts: the warm-up ping fires on app
 // mount but the backend may still be waking up when the first real API call
 // arrives. One automatic retry after 4 s covers the typical wake-up window.
+//
+// IMPORTANT: Only retry idempotent HTTP methods (GET, HEAD, OPTIONS).
+// Retrying POST/PUT/PATCH/DELETE risks duplicate writes (e.g. double-enrolling,
+// double-paying, double-applying).
+const IDEMPOTENT_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 async function fetchWithRetry(url: string, init: RequestInit, retries = 1): Promise<Response> {
   try {
     return await fetch(url, init);
   } catch (err) {
-    if (retries <= 0) throw err;
+    const method = String(init.method ?? "GET").toUpperCase();
+    if (retries <= 0 || !IDEMPOTENT_METHODS.has(method)) throw err;
     await new Promise((resolve) => setTimeout(resolve, 4_000));
     return fetchWithRetry(url, init, retries - 1);
   }

@@ -129,7 +129,13 @@ export default function RoleMenu({
               );
             })}
 
-            <div className="relative ml-1">
+          </nav>
+
+          <div className="flex shrink-0 items-center gap-1">
+            <span className="hidden sm:block"><RoleSwitcher /></span>
+            <NotificationBell />
+            {/* Account menu — always at the extreme right on desktop */}
+            <div className="relative hidden lg:block">
               <button
                 type="button"
                 aria-label="Account menu"
@@ -162,11 +168,6 @@ export default function RoleMenu({
                 </div>
               )}
             </div>
-          </nav>
-
-          <div className="flex shrink-0 items-center gap-1">
-            <span className="hidden sm:block"><RoleSwitcher /></span>
-            <NotificationBell />
             <button
               type="button"
               aria-label={panelOpen ? "Close menu" : "Open menu"}

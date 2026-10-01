@@ -152,6 +152,16 @@ export default function Login() {
             {error && (
               <div role="alert" className="rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
                 <p>{error}</p>
+                {mode === "email" && (
+                  error.toLowerCase().includes("invalid login credentials") ||
+                  error.toLowerCase().includes("invalid_credentials") ||
+                  error.toLowerCase().includes("email not confirmed")
+                ) && (
+                  <p className="mt-2 text-[#5b6b64]">
+                    If you signed up with Google, use the <strong className="text-[#12241c]">Continue with Google</strong> button below — Google accounts don't have a password unless you set one via{" "}
+                    <Link to="/forgot-password" className="font-semibold text-[#146c45] hover:underline">Forgot password</Link>.
+                  </p>
+                )}
                 {mode === "otp" && error.toLowerCase().includes("phone otp is not enabled") && (
                   <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <a href={getSupabaseAuthProvidersUrl()} target="_blank" rel="noreferrer" className="font-semibold text-[#146c45] hover:underline">

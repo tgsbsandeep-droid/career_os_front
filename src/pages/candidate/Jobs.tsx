@@ -152,23 +152,44 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void Promise.all([
-      apiRequest<{ jobs: ApiJob[]; page?: PageMeta }>(`/api/jobs?limit=${PAGE_SIZE}&offset=0`),
-      supabase.auth.getUser(),
-    ]).then(async ([jobsResponse, userResponse]) => {
-      setJobs(jobsResponse.jobs);
-      setHasMore(Boolean(jobsResponse.page?.hasMore));
+    void supabase.auth.getUser().then(async (userResponse) => {
       const user = userResponse.data.user;
       if (user) {
         setUserId(user.id);
-        const [applicationsResponse, savedResponse, profileResponse] = await Promise.all([
-          apiRequest<{ applications: CandidateApplication[] }>(`/api/candidate/${user.id}/applications`),
+        // Fetch all jobs, recommended scores, applications, saved jobs, and profile in parallel
+        const [jobsResponse, recommendedResponse, applicationsResponse, savedResponse, profileResponse] = await Promise.all([
+          apiRequest<{ jobs: ApiJob[]; page?: PageMeta }>(`/api/jobs?limit=${PAGE_SIZE}&offset=0`).catch(() => ({ jobs: [], page: undefined })),
+          apiRequest<{ jobs: ApiJob[]; skills?: string[] }>(`/api/jobs/recommended?limit=200&offset=0`).catch(() => null),
+          apiRequest<{ applications: CandidateApplication[] }>(`/api/candidate/${user.id}/applications`).catch(() => ({ applications: [] })),
           apiRequest<{ saved_jobs: { job_id: string }[] }>(`/api/candidate/${user.id}/saved-jobs`).catch(() => ({ saved_jobs: [] })),
           apiRequest<{ profile: (CandidateProfile & { skills?: string[] }) | null }>(`/api/candidate/${user.id}/profile`).catch(() => ({ profile: null })),
         ]);
+
+        // Build a map of server-computed scores from the recommended endpoint
+        // (recommended only returns jobs with match_score > 0, so unmatched jobs won't be in this map)
+        const serverScoreMap = new Map<string, Pick<ApiJob, "match_score" | "strengths" | "gaps">>();
+        for (const job of (recommendedResponse?.jobs ?? [])) {
+          if (job.id && typeof job.match_score === "number") {
+            serverScoreMap.set(job.id, {
+              match_score: job.match_score,
+              strengths: job.strengths ?? [],
+              gaps: job.gaps ?? [],
+            });
+          }
+        }
+
+        // Merge server scores into all jobs so scoreJob() will use them via the ?? fallback
+        const mergedJobs = jobsResponse.jobs.map((job) => {
+          const serverScore = serverScoreMap.get(job.id);
+          return serverScore ? { ...job, ...serverScore } : job;
+        });
+
+        setJobs(mergedJobs);
+        setHasMore(Boolean(jobsResponse.page?.hasMore));
+        // Prefer skills returned by the recommended endpoint (already fetched from DB server-side)
+        setCandidateSkills(recommendedResponse?.skills ?? profileResponse.profile?.skills ?? []);
         setAppliedJobs(new Set(applicationsResponse.applications.map((a) => a.job_id)));
         setSavedJobs(new Set((savedResponse.saved_jobs ?? []).map((row) => row.job_id)));
-        setCandidateSkills(profileResponse.profile?.skills ?? []);
         setApplyPrefill({
           full_name: profileResponse.profile?.full_name || user.user_metadata?.full_name || "",
           contact_email: profileResponse.profile?.contact_email || user.email || "",
@@ -177,6 +198,11 @@ export default function Jobs() {
           linkedin_url: profileResponse.profile?.linkedin_url || "",
           resume_url: profileResponse.profile?.resume_url || "",
         });
+      } else {
+        // Unauthenticated: load public job listing (no skill matching)
+        const jobsResponse = await apiRequest<{ jobs: ApiJob[]; page?: PageMeta }>(`/api/jobs?limit=${PAGE_SIZE}&offset=0`).catch(() => ({ jobs: [], page: undefined }));
+        setJobs(jobsResponse.jobs);
+        setHasMore(Boolean(jobsResponse.page?.hasMore));
       }
     }).catch(() => setJobs([])).finally(() => setLoading(false));
   }, []);

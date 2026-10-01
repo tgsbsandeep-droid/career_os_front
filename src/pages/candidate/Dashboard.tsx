@@ -94,7 +94,7 @@ export default function CandidateDashboard() {
           apiRequest<{ enrollments: Enrollment[] }>(`/api/candidate/${userId}/enrollments`),
           apiRequest<{ applications: Application[] }>(`/api/candidate/${userId}/applications`),
           apiRequest<{ notifications: Notification[] }>(`/api/notifications`),
-          apiRequest<{ jobs: unknown[] }>(`/api/jobs`),
+          apiRequest<{ jobs: unknown[] }>(`/api/jobs/recommended?limit=200&offset=0`),
         ]);
 
         if (enrollRes.status === "fulfilled") setEnrollments(enrollRes.value.enrollments ?? []);

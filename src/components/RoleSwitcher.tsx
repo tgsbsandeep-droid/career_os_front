@@ -1,21 +1,33 @@
 import { ChevronDown, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
+  aliasRole,
   getCachedUser,
   getDashboardPath,
   getRoleLabel,
-  getUserRole,
   getUserRoles,
   setActiveRole,
   subscribeToUser,
   type AppRole,
 } from "../services/auth";
 
+/** Derive the active role from the current URL path so we never depend on the
+ *  async Supabase JWT refresh having propagated the new active_role claim. */
+function roleFromPath(pathname: string): AppRole | null {
+  if (pathname.startsWith("/candidate")) return "candidate";
+  if (pathname.startsWith("/academy")) return "academy";
+  if (pathname.startsWith("/recruiter") || pathname.startsWith("/employer")) return "recruiter";
+  if (pathname.startsWith("/admin")) return "admin";
+  return null;
+}
+
 export default function RoleSwitcher() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const [user, setUser] = useState(getCachedUser());
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,16 +42,26 @@ export default function RoleSwitcher() {
   }, []);
 
   const roles = getUserRoles(user);
-  const active = getUserRole(user);
+  // Prefer the URL-derived role so the label is always in sync with the page
+  // being shown, regardless of whether the JWT has been re-issued yet.
+  const active: AppRole = roleFromPath(location.pathname) ?? aliasRole(
+    (user?.user_metadata as Record<string, unknown> | undefined)?.active_role
+  ) ?? roles[0] ?? "candidate";
+
   if (roles.length < 2 && !user) return null;
 
   async function switchTo(role: AppRole) {
     if (role === active) { setOpen(false); return; }
     setBusy(true);
+    setErr(null);
     try {
       const next = await setActiveRole(role);
       setOpen(false);
+      // Navigate using the target role directly — URL will then drive the
+      // active label via roleFromPath, so no JWT timing dependency.
       navigate(getDashboardPath(next, role), { replace: true });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Role switch failed");
     } finally {
       setBusy(false);
     }
@@ -58,6 +80,9 @@ export default function RoleSwitcher() {
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-2xl border border-[#e4eee9] bg-white p-1.5 shadow-[0_18px_40px_-28px_rgba(18,50,36,0.28)]">
+          {err && (
+            <p className="mb-1 rounded-xl bg-red-50 px-3 py-2 text-[12px] text-red-600">{err}</p>
+          )}
           {roles.map((role) => (
             <button
               key={role}

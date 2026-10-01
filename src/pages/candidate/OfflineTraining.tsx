@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiRequest, supabase } from "../../services/api";
 
 type TrainingCategory = "all" | "tech" | "management" | "design" | "data" | "softskills" | "certification";
 
@@ -293,7 +294,7 @@ function formatPriceFull(price: number) {
   return `₹${price.toLocaleString("en-IN")}`;
 }
 
-function loadRegistrations(): Record<string, Registration> {
+function loadLocalRegistrations(): Record<string, Registration> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
@@ -304,7 +305,7 @@ function loadRegistrations(): Record<string, Registration> {
   }
 }
 
-function saveRegistrations(map: Record<string, Registration>) {
+function saveLocalRegistrations(map: Record<string, Registration>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
 }
 
@@ -691,8 +692,78 @@ export default function OfflineTraining() {
   const [enrolling, setEnrolling] = useState(false);
   const [enrollError, setEnrollError] = useState<string | null>(null);
 
+  // On mount: load from API (authoritative) and merge with any localStorage
+  // entries that were created while offline or before the user logged in.
   useEffect(() => {
-    setRegistrations(loadRegistrations());
+    const local = loadLocalRegistrations();
+    let cancelled = false;
+
+    async function syncRegistrations() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
+
+      if (!user) {
+        // Not logged in — use localStorage only.
+        if (!cancelled) setRegistrations(local);
+        return;
+      }
+
+      try {
+        // 1. Fetch server-side registrations.
+        const res = await apiRequest<{ registrations: Array<{ training_id: string; registration_id: string; full_name: string; email: string; phone: string; status: string; enrolled_at: string }> }>(
+          `/api/candidate/${user.id}/offline-training-registrations`,
+        );
+        if (cancelled) return;
+
+        // Build a map from the server response.
+        const serverMap: Record<string, Registration> = {};
+        for (const r of res.registrations ?? []) {
+          serverMap[r.training_id] = {
+            trainingId: r.training_id,
+            registrationId: r.registration_id,
+            enrolledAt: r.enrolled_at,
+            fullName: r.full_name,
+            email: r.email,
+            phone: r.phone,
+            status: r.status === "waitlisted" ? "waitlisted" : "confirmed",
+          };
+        }
+
+        // 2. Sync any localStorage entries that are not yet on the server.
+        const pending = Object.values(local).filter((r) => !serverMap[r.trainingId]);
+        for (const r of pending) {
+          try {
+            await apiRequest(`/api/candidate/${user.id}/offline-training-registrations`, {
+              method: "POST",
+              body: JSON.stringify({
+                training_id: r.trainingId,
+                registration_id: r.registrationId,
+                full_name: r.fullName,
+                email: r.email,
+                phone: r.phone,
+                status: r.status,
+                enrolled_at: r.enrolledAt,
+              }),
+            });
+            serverMap[r.trainingId] = r;
+          } catch {
+            // Keep the local entry if the sync fails; it will retry next mount.
+            serverMap[r.trainingId] = r;
+          }
+        }
+
+        if (cancelled) return;
+        // 3. Persist merged state to localStorage and React state.
+        saveLocalRegistrations(serverMap);
+        setRegistrations(serverMap);
+      } catch {
+        // API unavailable — fall back to localStorage.
+        if (!cancelled) setRegistrations(local);
+      }
+    }
+
+    void syncRegistrations();
+    return () => { cancelled = true; };
   }, []);
 
   const selected = useMemo(() => TRAININGS.find((item) => item.id === selectedId) ?? null, [selectedId]);
@@ -704,7 +775,7 @@ export default function OfflineTraining() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function confirmEnrollment(form: EnrollForm) {
+  async function confirmEnrollment(form: EnrollForm) {
     if (!selected) return;
     if (registrations[selected.id]) {
       setEnrollOpen(false);
@@ -721,9 +792,32 @@ export default function OfflineTraining() {
       phone: form.phone,
       status: selected.seatsLeft > 0 ? "confirmed" : "waitlisted",
     };
+
+    // Write-through: persist to backend if logged in, always save to localStorage.
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+    if (user) {
+      try {
+        await apiRequest(`/api/candidate/${user.id}/offline-training-registrations`, {
+          method: "POST",
+          body: JSON.stringify({
+            training_id: registration.trainingId,
+            registration_id: registration.registrationId,
+            full_name: registration.fullName,
+            email: registration.email,
+            phone: registration.phone,
+            status: registration.status,
+            enrolled_at: registration.enrolledAt,
+          }),
+        });
+      } catch {
+        // Backend unavailable — localStorage is the fallback; sync on next login.
+      }
+    }
+
     const next = { ...registrations, [selected.id]: registration };
     setRegistrations(next);
-    saveRegistrations(next);
+    saveLocalRegistrations(next);
     setEnrolling(false);
     setEnrollOpen(false);
   }

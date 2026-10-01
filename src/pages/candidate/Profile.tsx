@@ -72,7 +72,8 @@ export default function Profile() {
   const [skills, setSkills] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState("");
   const [experience, setExperience] = useState<ExperienceEntry[]>([{ ...emptyExperience }]);
-  const [resumeUrl, setResumeUrl] = useState("");
+  const [resumeUrl, setResumeUrl] = useState("");   // signed URL for display only
+  const [resumePath, setResumePath] = useState(""); // raw storage path persisted to DB
   // Portfolio & social links
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [githubUrl, setGithubUrl] = useState("");
@@ -187,7 +188,7 @@ export default function Profile() {
           `/api/candidate/${data.user.id}/profile`
         ),
         apiRequest<{ enrollments: EnrolledCourse[] }>(`/api/candidate/${data.user.id}/enrollments`).catch(() => ({ enrollments: [] as EnrolledCourse[] })),
-      ]).then(([{ profile }, enrollRes]) => {
+      ]).then(async ([{ profile }, enrollRes]) => {
         setEnrolledCourses(enrollRes.enrollments ?? []);
         if (!profile) return;
         setAvatarUrl(profile.avatar_url ?? "");
@@ -196,7 +197,16 @@ export default function Profile() {
         const nextField = profile.education_field ?? "";
         const nextSkills = profile.skills ?? [];
         const nextExperience = profile.experience?.length ? profile.experience.map(parseExperienceEntry) : [{ ...emptyExperience }];
-        const nextResumeUrl = profile.resume_url ?? "";
+        // Generate a signed URL (1 h) so the CV is never exposed via a public link.
+        // The raw path is stored in the DB; we only use it to create the signed URL.
+        const nextResumePath = profile.resume_url ?? "";
+        let nextResumeUrl = "";
+        if (nextResumePath) {
+          const { data: signedData } = await supabase.storage
+            .from("resumes")
+            .createSignedUrl(nextResumePath, 3600);
+          nextResumeUrl = signedData?.signedUrl ?? "";
+        }
         let nextCertificates: Certificate[] = [];
         if (profile.certificates?.length) {
           try {
@@ -213,6 +223,7 @@ export default function Profile() {
         setLocation(profile.location ?? "");
         setSkills(nextSkills);
         setExperience(nextExperience);
+        setResumePath(nextResumePath);
         setResumeUrl(nextResumeUrl);
         setLinkedinUrl(profile.linkedin_url ?? "");
         setGithubUrl(profile.github_url ?? "");
@@ -242,9 +253,12 @@ export default function Profile() {
     const path = `${userId}/${Date.now()}-${fileName}`;
     const { error } = await supabase.storage.from("resumes").upload(path, file, { upsert: true });
     if (error) { setMessage({ text: error.message, type: "error" }); setUploading(false); return; }
-    const { data: publicUrlData } = supabase.storage.from("resumes").getPublicUrl(path);
-    const nextResumeUrl = publicUrlData.publicUrl;
-    setResumeUrl(nextResumeUrl);
+    // Store the raw path for DB persistence; generate a 1-hour signed URL for display.
+    // Never use getPublicUrl — the bucket must not be publicly readable.
+    const { data: signedData } = await supabase.storage.from("resumes").createSignedUrl(path, 3600);
+    const nextResumeUrl = signedData?.signedUrl ?? "";
+    setResumePath(path);       // raw path → saved to DB
+    setResumeUrl(nextResumeUrl); // signed URL → display only
     setUploading(false);
     void fetchCandidateSkillSuggestions({
       education,
@@ -309,7 +323,7 @@ export default function Profile() {
           experience: experience
             .filter((e) => e.startMonth || e.organization || e.role || e.description)
             .map((e) => JSON.stringify(e)),
-          resume_url: resumeUrl || null,
+          resume_url: resumePath || null, // persist raw storage path, not the signed URL
           linkedin_url: linkedinUrl || null,
           github_url: githubUrl || null,
           portfolio_url: portfolioUrl || null,
