@@ -94,7 +94,7 @@ const menuLink = ({ isActive }: { isActive: boolean }) =>
 export default function CandidateMenu() {
   const location = useLocation();
   const navigate = useNavigate();
-  const navRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [mobileGroup, setMobileGroup] = useState<string | null>(
@@ -140,7 +140,7 @@ export default function CandidateMenu() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#e4eee9] bg-white/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1180px] items-center justify-between gap-3 px-5">
+      <div ref={navRef} className="mx-auto flex h-16 max-w-[1180px] items-center justify-between gap-3 px-5">
         <Link to="/candidate/dashboard" className="flex min-w-0 shrink-0 items-center gap-2.5">
           <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[#1a8f5a] to-[#0b5c3a] text-white shadow-[0_8px_20px_-8px_rgba(11,92,58,0.7)]">
             <span className="font-[family-name:var(--font-display)] text-[17px] font-bold leading-none">C</span>
@@ -151,7 +151,7 @@ export default function CandidateMenu() {
           </span>
         </Link>
 
-        <nav ref={navRef} className="hidden min-w-0 items-center gap-0.5 lg:flex">
+        <nav className="hidden min-w-0 items-center gap-0.5 lg:flex">
           <NavLink to={dashboardItem.to} className={headerLink}>
             <dashboardItem.icon size={16} />
             {dashboardItem.label}
