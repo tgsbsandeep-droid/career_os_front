@@ -1,16 +1,20 @@
 import { ChevronDown, LogOut, Menu, UserRound, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { supabase } from "../services/api";
 import { getCachedUser, subscribeToUser } from "../services/auth";
 import NotificationBell from "./NotificationBell";
 import RoleSwitcher from "./RoleSwitcher";
 
-function getAvatarInfo(user: ReturnType<typeof getCachedUser>) {
+function getUserInitials(user: ReturnType<typeof getCachedUser>) {
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
-  const avatarUrl = typeof meta.avatar_url === "string" ? meta.avatar_url : "";
   const fullName = typeof meta.full_name === "string" ? meta.full_name : (user?.email ?? "");
-  const initials = fullName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
-  return { avatarUrl, initials };
+  return fullName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+function getRawAvatarUrl(user: ReturnType<typeof getCachedUser>) {
+  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  return typeof meta.avatar_url === "string" ? meta.avatar_url : "";
 }
 
 export type RoleNavItem = { to: string; label: string; icon: ReactNode };
@@ -44,8 +48,19 @@ export default function RoleMenu({
   const [panelOpen, setPanelOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
   const [avatarUser, setAvatarUser] = useState(getCachedUser());
+  const [resolvedAvatarUrl, setResolvedAvatarUrl] = useState("");
 
   useEffect(() => subscribeToUser((u) => setAvatarUser(u)), []);
+
+  useEffect(() => {
+    const raw = getRawAvatarUrl(avatarUser);
+    if (!raw) { setResolvedAvatarUrl(""); return; }
+    if (/^https?:\/\//i.test(raw)) { setResolvedAvatarUrl(raw); return; }
+    void (async () => {
+      const { data } = await supabase.storage.from("avatars").createSignedUrl(raw, 3600);
+      setResolvedAvatarUrl(data?.signedUrl ?? "");
+    })();
+  }, [avatarUser]);
 
   useEffect(() => {
     function onDocClick(event: MouseEvent) {
@@ -160,21 +175,17 @@ export default function RoleMenu({
                     : "hover:ring-2 hover:ring-[#146c45]/40 hover:ring-offset-1"
                 }`}
               >
-                {(() => {
-                  const { avatarUrl, initials } = getAvatarInfo(avatarUser);
-                  if (avatarUrl) {
-                    return <img src={avatarUrl} alt="Avatar" className="h-11 w-11 rounded-full object-cover" />;
-                  }
-                  return (
-                    <span className={`flex h-11 w-11 items-center justify-center rounded-full text-[13px] font-semibold ${
-                      accountOpen || (profileTo && pathMatches(location.pathname, profileTo))
-                        ? "bg-[#146c45] text-white"
-                        : "bg-[#eaf6f0] text-[#146c45]"
-                    }`}>
-                      {initials !== "?" ? initials : <UserRound size={16} />}
-                    </span>
-                  );
-                })()}
+                {resolvedAvatarUrl ? (
+                  <img src={resolvedAvatarUrl} alt="Avatar" className="h-11 w-11 rounded-full object-cover" />
+                ) : (
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-full text-[13px] font-semibold ${
+                    accountOpen || (profileTo && pathMatches(location.pathname, profileTo))
+                      ? "bg-[#146c45] text-white"
+                      : "bg-[#eaf6f0] text-[#146c45]"
+                  }`}>
+                    {(() => { const i = getUserInitials(avatarUser); return i !== "?" ? i : <UserRound size={16} />; })()}
+                  </span>
+                )}
               </button>
               {accountOpen && (
                 <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-[#e4eee9] bg-white p-1.5 shadow-[0_18px_40px_-28px_rgba(18,50,36,0.28)]">
