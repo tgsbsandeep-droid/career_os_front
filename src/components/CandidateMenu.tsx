@@ -20,6 +20,7 @@ import {
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../services/api";
+import { getCachedUser, subscribeToUser } from "../services/auth";
 import NotificationBell from "./NotificationBell";
 import RoleSwitcher from "./RoleSwitcher";
 
@@ -91,6 +92,14 @@ const menuLink = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-[#eaf6f0] text-[#146c45]" : "text-[#3d4d46] hover:bg-[#f0f7f3]"
   }`;
 
+function getAvatarInfo(user: ReturnType<typeof getCachedUser>) {
+  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const avatarUrl = typeof meta.avatar_url === "string" ? meta.avatar_url : "";
+  const fullName = typeof meta.full_name === "string" ? meta.full_name : (user?.email ?? "");
+  const initials = fullName.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("") || "?";
+  return { avatarUrl, initials };
+}
+
 export default function CandidateMenu() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -100,6 +109,9 @@ export default function CandidateMenu() {
   const [mobileGroup, setMobileGroup] = useState<string | null>(
     groups.find((group) => groupIsActive(location.pathname, group))?.id ?? null,
   );
+  const [avatarUser, setAvatarUser] = useState(getCachedUser());
+
+  useEffect(() => subscribeToUser((u) => setAvatarUser(u)), []);
 
   useEffect(() => {
     setOpenGroup(null);
@@ -203,13 +215,27 @@ export default function CandidateMenu() {
               aria-expanded={accountOpen}
               aria-haspopup="menu"
               onClick={() => setOpenGroup(accountOpen ? null : "account")}
-              className={`grid h-11 w-11 place-items-center rounded-full transition duration-200 ${
+              className={`grid h-11 w-11 place-items-center overflow-hidden rounded-full transition duration-200 ${
                 accountOpen || pathMatches(location.pathname, profileItem.to)
-                  ? "bg-[#146c45] text-white"
-                  : "bg-[#eaf6f0] text-[#146c45] hover:bg-[#d4ede2]"
+                  ? "ring-2 ring-[#146c45] ring-offset-1"
+                  : "hover:ring-2 hover:ring-[#146c45]/40 hover:ring-offset-1"
               }`}
             >
-              <UserRound size={16} />
+              {(() => {
+                const { avatarUrl, initials } = getAvatarInfo(avatarUser);
+                if (avatarUrl) {
+                  return <img src={avatarUrl} alt="Avatar" className="h-11 w-11 rounded-full object-cover" />;
+                }
+                return (
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-full text-[13px] font-semibold ${
+                    accountOpen || pathMatches(location.pathname, profileItem.to)
+                      ? "bg-[#146c45] text-white"
+                      : "bg-[#eaf6f0] text-[#146c45]"
+                  }`}>
+                    {initials !== "?" ? initials : <UserRound size={16} />}
+                  </span>
+                );
+              })()}
             </button>
             {accountOpen && !panelOpen && (
               <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-[#e4eee9] bg-white p-1.5 shadow-[0_18px_40px_-28px_rgba(18,50,36,0.28)]">
