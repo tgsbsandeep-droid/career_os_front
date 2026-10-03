@@ -53,10 +53,23 @@ export default function RoleMenu({
   useEffect(() => subscribeToUser((u) => setAvatarUser(u)), []);
 
   useEffect(() => {
-    const raw = getRawAvatarUrl(avatarUser);
-    if (!raw) { setResolvedAvatarUrl(""); return; }
-    if (/^https?:\/\//i.test(raw)) { setResolvedAvatarUrl(raw); return; }
     void (async () => {
+      let raw = getRawAvatarUrl(avatarUser);
+      // Fallback: if user_metadata.avatar_url is not set, fetch from candidate_profiles.
+      if (!raw && avatarUser?.id) {
+        const { data: profileRow } = await supabase
+          .from("candidate_profiles")
+          .select("avatar_url")
+          .eq("id", avatarUser.id)
+          .maybeSingle();
+        raw = (profileRow as { avatar_url?: string } | null)?.avatar_url ?? "";
+        // Backfill user_metadata so subsequent renders skip the DB call.
+        if (raw) {
+          void supabase.auth.updateUser({ data: { avatar_url: raw } });
+        }
+      }
+      if (!raw) { setResolvedAvatarUrl(""); return; }
+      if (/^https?:\/\//i.test(raw)) { setResolvedAvatarUrl(raw); return; }
       const { data } = await supabase.storage.from("avatars").createSignedUrl(raw, 3600);
       setResolvedAvatarUrl(data?.signedUrl ?? "");
     })();

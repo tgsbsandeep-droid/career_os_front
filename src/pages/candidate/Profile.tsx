@@ -191,7 +191,13 @@ export default function Profile() {
       ]).then(async ([{ profile }, enrollRes]) => {
         setEnrolledCourses(enrollRes.enrollments ?? []);
         if (!profile) return;
-        setAvatarUrl(profile.avatar_url ?? "");
+        const loadedAvatarUrl = profile.avatar_url ?? "";
+        setAvatarUrl(loadedAvatarUrl);
+        // Sync avatar_url into auth user_metadata if it's missing there,
+        // so the navbar avatar shows without requiring a profile re-save.
+        if (loadedAvatarUrl && loadedAvatarUrl !== (data.user.user_metadata?.avatar_url ?? "")) {
+          void supabase.auth.updateUser({ data: { avatar_url: loadedAvatarUrl } });
+        }
         const nextEducation = profile.education ?? "";
         const nextInstitution = profile.education_institution ?? "";
         const nextField = profile.education_field ?? "";
@@ -331,6 +337,10 @@ export default function Profile() {
           certificates: certificates.map((c) => JSON.stringify(c)),
         }),
       });
+      // Sync avatar_url into auth user_metadata so the navbar avatar updates immediately.
+      if (avatarUrl) {
+        await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
+      }
       setMessage({ text: "Profile saved successfully!", type: "success" });
     } catch (err) {
       setMessage({ text: (err as Error).message, type: "error" });
