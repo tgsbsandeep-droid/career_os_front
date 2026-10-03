@@ -22,23 +22,33 @@ const skillSuggestions = [
 const inputClass =
   "w-full rounded-xl border border-[#e4eee9] bg-[#f7fbf9] px-4 py-3 text-[14px] text-[#12241c] placeholder-[#7a8b84] outline-none transition focus:border-[#146c45] focus:bg-white focus:ring-2 focus:ring-[#146c45]/10";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
 function MarkdownBlock({ text }: { text: string }) {
-  const lines = text.split("\n");
   return (
-    <div className="space-y-1.5 text-[14px] leading-7 text-[#3d4d46]">
-      {lines.map((line, i) => {
-        if (line.startsWith("## ")) return <h3 key={i} className="mt-4 font-[family-name:var(--font-display)] text-[16px] font-semibold text-[#12241c]">{line.slice(3)}</h3>;
-        if (line.startsWith("# ")) return <h2 key={i} className="mt-5 font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#12241c]">{line.slice(2)}</h2>;
-        if (line.startsWith("**") && line.endsWith("**")) return <p key={i} className="font-semibold text-[#12241c]">{line.slice(2, -2)}</p>;
-        if (line.match(/^\*\*(.+)\*\*/)) {
-          const parts = line.split(/\*\*(.+?)\*\*/g);
-          return <p key={i}>{parts.map((p, j) => j % 2 === 1 ? <strong key={j} className="font-semibold text-[#12241c]">{p}</strong> : p)}</p>;
-        }
-        if (line.startsWith("- ") || line.startsWith("• ")) return <li key={i} className="ml-4 list-disc">{line.slice(2)}</li>;
-        if (line.match(/^\d+\./)) return <li key={i} className="ml-4 list-decimal">{line.replace(/^\d+\.\s*/, "")}</li>;
-        if (line.trim() === "") return <div key={i} className="h-1" />;
-        return <p key={i}>{line}</p>;
-      })}
+    <div className="text-[14px] leading-7 text-[#3d4d46]">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => <h1 className="mb-2 mt-5 font-[family-name:var(--font-display)] text-[18px] font-semibold text-[#12241c] first:mt-0">{children}</h1>,
+          h2: ({ children }) => <h2 className="mb-2 mt-4 font-[family-name:var(--font-display)] text-[16px] font-semibold text-[#12241c] first:mt-0">{children}</h2>,
+          h3: ({ children }) => <h3 className="mb-1.5 mt-3 text-[14px] font-semibold text-[#12241c] first:mt-0">{children}</h3>,
+          p: ({ children }) => <p className="mb-3 last:mb-0 leading-7">{children}</p>,
+          ul: ({ children }) => <ul className="mb-3 ml-4 list-disc space-y-1 last:mb-0">{children}</ul>,
+          ol: ({ children }) => <ol className="mb-3 ml-4 list-decimal space-y-1 last:mb-0">{children}</ol>,
+          li: ({ children }) => <li className="leading-6">{children}</li>,
+          strong: ({ children }) => <strong className="font-semibold text-[#12241c]">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+          code: ({ children }) => <code className="rounded bg-[#e4eee9] px-1.5 py-0.5 text-[12px] font-mono text-[#146c45]">{children}</code>,
+          pre: ({ children }) => <pre className="mb-3 overflow-x-auto rounded-xl bg-[#12241c] p-4 text-[12px] text-white last:mb-0">{children}</pre>,
+          blockquote: ({ children }) => <blockquote className="mb-3 border-l-4 border-[#146c45] pl-4 text-[#5b6b64] italic last:mb-0">{children}</blockquote>,
+          hr: () => <hr className="my-4 border-[#e4eee9]" />,
+          a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#146c45] underline hover:text-[#0f5a39]">{children}</a>,
+        }}
+      >
+        {text}
+      </ReactMarkdown>
     </div>
   );
 }

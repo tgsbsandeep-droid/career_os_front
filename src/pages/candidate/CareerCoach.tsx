@@ -12,6 +12,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { getCareerAdvice } from "../../services/ai";
 import { apiRequest, supabase } from "../../services/api";
 
@@ -196,10 +198,28 @@ export default function CareerCoach() {
               </button>
             </div>
 
-            <div className="prose prose-sm max-w-none">
-              <div className="whitespace-pre-wrap text-[14px] leading-7 text-[#3d4d46]">
+            <div className="text-[14px] leading-7 text-[#3d4d46]">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ children }) => <h1 className="mb-2 mt-4 text-[17px] font-semibold text-[#12241c] first:mt-0">{children}</h1>,
+                  h2: ({ children }) => <h2 className="mb-2 mt-4 text-[15px] font-semibold text-[#12241c] first:mt-0">{children}</h2>,
+                  h3: ({ children }) => <h3 className="mb-1.5 mt-3 text-[14px] font-semibold text-[#12241c] first:mt-0">{children}</h3>,
+                  p: ({ children }) => <p className="mb-3 last:mb-0 leading-7">{children}</p>,
+                  ul: ({ children }) => <ul className="mb-3 ml-4 list-disc space-y-1 last:mb-0">{children}</ul>,
+                  ol: ({ children }) => <ol className="mb-3 ml-4 list-decimal space-y-1 last:mb-0">{children}</ol>,
+                  li: ({ children }) => <li className="leading-6">{children}</li>,
+                  strong: ({ children }) => <strong className="font-semibold text-[#12241c]">{children}</strong>,
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  code: ({ children }) => <code className="rounded bg-[#e4eee9] px-1.5 py-0.5 text-[12px] font-mono text-[#146c45]">{children}</code>,
+                  pre: ({ children }) => <pre className="mb-3 overflow-x-auto rounded-xl bg-[#12241c] p-4 text-[12px] text-white last:mb-0">{children}</pre>,
+                  blockquote: ({ children }) => <blockquote className="mb-3 border-l-4 border-[#146c45] pl-4 text-[#5b6b64] italic last:mb-0">{children}</blockquote>,
+                  hr: () => <hr className="my-4 border-[#e4eee9]" />,
+                  a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#146c45] underline hover:text-[#0f5a39]">{children}</a>,
+                }}
+              >
                 {advice}
-              </div>
+              </ReactMarkdown>
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3 border-t border-[#eef3f0] pt-5">
