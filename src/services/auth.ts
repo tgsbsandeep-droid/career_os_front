@@ -1,5 +1,5 @@
 import type { User } from "@supabase/supabase-js";
-import { supabase } from "./api";
+import { supabase, apiRequest } from "./api";
 
 export const VALID_ROLES = ["candidate", "academy", "recruiter", "admin"] as const;
 export type AppRole = (typeof VALID_ROLES)[number];
@@ -447,4 +447,109 @@ export async function updatePassword(password: string) {
   if (next.length < 8) throw new Error("Password must be at least 8 characters.");
   const { error } = await supabase.auth.updateUser({ password: next });
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Backend-proxied auth — all Supabase calls go through /api/auth/* so the
+// Supabase keys are never needed in the browser for auth operations.
+// ---------------------------------------------------------------------------
+
+type AuthApiSession = {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  token_type: string;
+};
+
+type AuthApiUser = {
+  id: string;
+  email: string;
+  user_metadata: Record<string, unknown>;
+  app_metadata?: Record<string, unknown>;
+};
+
+type SignUpApiResponse = {
+  success: boolean;
+  user: AuthApiUser | null;
+  session: AuthApiSession | null;
+  email_confirmation_required: boolean;
+};
+
+type SignInApiResponse = {
+  success: boolean;
+  user: AuthApiUser;
+  session: AuthApiSession;
+};
+
+/**
+ * Sign up via backend /api/auth/signup.
+ * Returns { user, session, emailConfirmationRequired }.
+ * After success, sets the Supabase session locally so the rest of the app
+ * (which still uses supabase.auth.getSession()) picks up the JWT.
+ */
+export async function signUpViaApi(params: {
+  email: string;
+  password: string;
+  full_name: string;
+  role: AppRole;
+  roles: AppRole[];
+  active_role: AppRole;
+}): Promise<{ user: AuthApiUser | null; session: AuthApiSession | null; emailConfirmationRequired: boolean }> {
+  const data = await apiRequest<SignUpApiResponse>("/api/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+
+  // If a session was returned, set it in the local Supabase client so
+  // onAuthStateChange fires and the rest of the app sees the logged-in user.
+  if (data.session) {
+    await supabase.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    });
+  }
+
+  return {
+    user: data.user,
+    session: data.session,
+    emailConfirmationRequired: data.email_confirmation_required,
+  };
+}
+
+/**
+ * Sign in via backend /api/auth/login.
+ * Sets the Supabase session locally after success.
+ */
+export async function signInViaApi(params: {
+  email: string;
+  password: string;
+}): Promise<{ user: AuthApiUser; session: AuthApiSession }> {
+  const data = await apiRequest<SignInApiResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+
+  // Hydrate the local Supabase client with the returned session.
+  await supabase.auth.setSession({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+  });
+
+  return { user: data.user, session: data.session };
+}
+
+/**
+ * Sign out via backend /api/auth/logout.
+ */
+export async function signOutViaApi(): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (token) {
+    await apiRequest("/api/auth/logout", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => { /* best-effort */ });
+  }
+  // Always clear local session regardless of backend response.
+  await supabase.auth.signOut();
 }

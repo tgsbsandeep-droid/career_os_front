@@ -7,12 +7,13 @@ import {
   needsRoleSelection,
   persistProfile,
   requireSingleSignupRole,
+  signUpViaApi,
   subscribeToUser,
   type AppRole,
 } from "../../services/auth";
 import { Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
-import { supabase } from "../../services/api";
 import AuthSocialButtons from "../../components/AuthSocialButtons";
+import { sendWelcomeEmail } from "../../services/emailjs";
 
 const roleChoices: { value: AppRole; label: string; description: string }[] = [
   { value: "candidate", label: "Candidate", description: "Find jobs & grow skills" },
@@ -86,32 +87,55 @@ export default function Register() {
     setLoading(true);
 
     const selected = [active];
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: trimmedEmail,
-      password,
-      options: { data: { full_name: fullName, role: active, roles: selected, active_role: active } },
-    });
 
-    if (authError) {
+    let signupUser: { id: string; email: string; user_metadata: Record<string, unknown> } | null = null;
+    let signupSession: { access_token: string; refresh_token: string } | null = null;
+    let emailConfirmationRequired = false;
+
+    try {
+      const result = await signUpViaApi({
+        email: trimmedEmail,
+        password,
+        full_name: fullName,
+        role: active,
+        roles: selected,
+        active_role: active,
+      });
+      signupUser = result.user;
+      signupSession = result.session;
+      emailConfirmationRequired = result.emailConfirmationRequired;
+    } catch (err) {
       redirected.current = false;
-      if (authError.message.toLowerCase().includes("email rate limit")) {
+      const msg = (err as Error).message ?? "Signup failed.";
+      if (msg.toLowerCase().includes("email rate limit")) {
         setError("Too many requests. Please use the most recent confirmation email or wait an hour.");
       } else {
-        setError(authError.message);
+        setError(msg);
       }
       setLoading(false);
       return;
     }
 
-    if (data.user) {
-      if (data.session) {
+    if (signupUser) {
+      if (signupSession && !emailConfirmationRequired) {
+        // JWT token is available — send welcome email via EmailJS (best-effort)
+        void sendWelcomeEmail({
+          toEmail: trimmedEmail,
+          toName:  fullName || trimmedEmail.split("@")[0],
+        }).catch(() => { /* ignore email errors */ });
+
         try {
-          await persistProfile(data.user, { full_name: fullName, roles: selected, active_role: active });
+          // persistProfile needs a Supabase User shape — use cached user after setSession
+          const { data: sessionData } = await (await import("../../services/api")).supabase.auth.getUser();
+          if (sessionData.user) {
+            await persistProfile(sessionData.user, { full_name: fullName, roles: selected, active_role: active });
+          }
         } catch {
-          /* profile upsert is best-effort; metadata is already on the user */
+          /* profile upsert is best-effort */
         }
-        goNext(data.session.user);
+        // onAuthStateChange will fire after setSession in signUpViaApi — goNext via subscribeToUser
       } else {
+        // No session yet — email confirmation pending, JWT not issued yet
         setSuccess(true);
       }
     }

@@ -8,11 +8,11 @@ import {
   mapAuthError,
   needsRoleSelection,
   sendPhoneOtp,
+  signInViaApi,
   subscribeToUser,
   verifyPhoneOtp,
 } from "../../services/auth";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { supabase } from "../../services/api";
 import AuthSocialButtons from "../../components/AuthSocialButtons";
 
 const inputClass =
@@ -83,9 +83,9 @@ export default function Login() {
     setLoading(true);
     try {
       if (mode === "email") {
-        const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-        if (authError) throw authError;
-        goNext(data.user ?? data.session?.user);
+        const { user } = await signInViaApi({ email, password });
+        // onAuthStateChange fires after setSession in signInViaApi — goNext via subscribeToUser
+        goNext(user as Parameters<typeof getDashboardPath>[0]);
       } else if (!otpSent) {
         await sendPhoneOtp(phone);
         setOtpSent(true);
