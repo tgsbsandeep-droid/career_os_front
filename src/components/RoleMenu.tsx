@@ -70,8 +70,9 @@ export default function RoleMenu({
       }
       if (!raw) { setResolvedAvatarUrl(""); return; }
       if (/^https?:\/\//i.test(raw)) { setResolvedAvatarUrl(raw); return; }
-      const { data } = await supabase.storage.from("avatars").createSignedUrl(raw, 3600);
-      setResolvedAvatarUrl(data?.signedUrl ?? "");
+      // raw is a storage path — avatars bucket is public, use getPublicUrl.
+      const { data } = supabase.storage.from("avatars").getPublicUrl(raw);
+      setResolvedAvatarUrl(data?.publicUrl ?? "");
     })();
   }, [avatarUser]);
 
@@ -189,7 +190,12 @@ export default function RoleMenu({
                 }`}
               >
                 {resolvedAvatarUrl ? (
-                  <img src={resolvedAvatarUrl} alt="Avatar" className="h-11 w-11 rounded-full object-cover" />
+                  <img
+                    src={resolvedAvatarUrl}
+                    alt="Avatar"
+                    className="h-11 w-11 rounded-full object-cover"
+                    onError={() => setResolvedAvatarUrl("")}
+                  />
                 ) : (
                   <span className={`flex h-11 w-11 items-center justify-center rounded-full text-[13px] font-semibold ${
                     accountOpen || (profileTo && pathMatches(location.pathname, profileTo))

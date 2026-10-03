@@ -94,13 +94,13 @@ export default function CandidateDashboard() {
           apiRequest<{ enrollments: Enrollment[] }>(`/api/candidate/${userId}/enrollments`),
           apiRequest<{ applications: Application[] }>(`/api/candidate/${userId}/applications`),
           apiRequest<{ notifications: Notification[] }>(`/api/notifications`),
-          apiRequest<{ jobs: unknown[]; page?: { total?: number } }>(`/api/jobs/recommended?limit=200&offset=0`),
+          apiRequest<{ jobs: unknown[]; matchCount?: number; page?: { total?: number } }>(`/api/jobs/recommended?limit=200&offset=0`),
         ]);
 
         if (enrollRes.status === "fulfilled") setEnrollments(enrollRes.value.enrollments ?? []);
         if (appRes.status === "fulfilled") setApplications(appRes.value.applications ?? []);
         if (notifRes.status === "fulfilled") setNotifications(notifRes.value.notifications ?? []);
-        if (jobRes.status === "fulfilled") setJobCount(jobRes.value.page?.total ?? (jobRes.value.jobs ?? []).length);
+        if (jobRes.status === "fulfilled") setJobCount(jobRes.value.matchCount ?? (jobRes.value.jobs ?? []).length);
       } finally {
         setLoading(false);
       }
